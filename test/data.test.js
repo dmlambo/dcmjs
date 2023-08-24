@@ -13,16 +13,17 @@ import { promisify } from "util";
 import arrayItem from "./arrayItem.json";
 import minimalDataset from "./mocks/minimal_fields_dataset.json";
 import datasetWithNullNumberVRs from "./mocks/null_number_vrs_dataset.json";
+import sampleDicom from "./sample-dicom.json";
 import { rawTags } from "./rawTags";
 
-import { EXPLICIT_LITTLE_ENDIAN, IMPLICIT_LITTLE_ENDIAN } from "./../src/constants/dicom.js";
+import {
+    EXPLICIT_LITTLE_ENDIAN,
+    IMPLICIT_LITTLE_ENDIAN
+} from "./../src/constants/dicom.js";
+import json from "@rollup/plugin-json";
 
-const {
-    DicomMetaDictionary,
-    DicomDict,
-    DicomMessage,
-    ReadBufferStream
-} = dcmjs.data;
+const { DicomMetaDictionary, DicomDict, DicomMessage, ReadBufferStream } =
+    dcmjs.data;
 
 const fileMetaInformationVersionArray = new Uint8Array(2);
 fileMetaInformationVersionArray[1] = 1;
@@ -159,9 +160,8 @@ it("test_json_1", () => {
     //
     // make a natural version of a dataset with sequence tags and confirm it has correct values
     //
-    const naturalSequence = DicomMetaDictionary.naturalizeDataset(
-        sequenceMetadata
-    );
+    const naturalSequence =
+        DicomMetaDictionary.naturalizeDataset(sequenceMetadata);
 
     // The match object needs to be done on the actual element, not the proxied value
     expect(naturalSequence.ProcedureCodeSequence[0]).toMatchObject({
@@ -205,26 +205,29 @@ it("test_json_1", () => {
 });
 
 it("test_multiframe_1", async () => {
-
     const url =
         "https://github.com/dcmjs-org/data/releases/download/MRHead/MRHead.zip";
-    const unzipPath = await getZippedTestDataset(url, "MRHead.zip", "test_multiframe_1");
+    const unzipPath = await getZippedTestDataset(
+        url,
+        "MRHead.zip",
+        "test_multiframe_1"
+    );
     const mrHeadPath = path.join(unzipPath, "MRHead");
     const fileNames = await fsPromises.readdir(mrHeadPath);
 
     const datasets = [];
     fileNames.forEach(fileName => {
-        const arrayBuffer = fs.readFileSync(path.join(mrHeadPath, fileName))
-            .buffer;
+        const arrayBuffer = fs.readFileSync(
+            path.join(mrHeadPath, fileName)
+        ).buffer;
         const dicomDict = DicomMessage.readFile(arrayBuffer);
         const dataset = DicomMetaDictionary.naturalizeDataset(dicomDict.dict);
 
         datasets.push(dataset);
     });
 
-    const multiframe = dcmjs.normalizers.Normalizer.normalizeToDataset(
-        datasets
-    );
+    const multiframe =
+        dcmjs.normalizers.Normalizer.normalizeToDataset(datasets);
     const spacing =
         multiframe.SharedFunctionalGroupsSequence.PixelMeasuresSequence
             .SpacingBetweenSlices;
@@ -239,8 +242,12 @@ it("test_oneslice_seg", async () => {
         "https://github.com/dcmjs-org/data/releases/download/CTPelvis/CTPelvis.zip";
     const segURL =
         "https://github.com/dcmjs-org/data/releases/download/CTPelvis/Lesion1_onesliceSEG.dcm";
-    const unzipPath = await getZippedTestDataset(ctPelvisURL, "CTPelvis.zip", "test_oneslice_seg");
-    const segFileName = "Lesion1_onesliceSEG.dcm"
+    const unzipPath = await getZippedTestDataset(
+        ctPelvisURL,
+        "CTPelvis.zip",
+        "test_oneslice_seg"
+    );
+    const segFileName = "Lesion1_onesliceSEG.dcm";
 
     const ctPelvisPath = path.join(
         unzipPath,
@@ -251,8 +258,9 @@ it("test_oneslice_seg", async () => {
 
     const datasets = [];
     fileNames.forEach(fileName => {
-        const arrayBuffer = fs.readFileSync(path.join(ctPelvisPath, fileName))
-            .buffer;
+        const arrayBuffer = fs.readFileSync(
+            path.join(ctPelvisPath, fileName)
+        ).buffer;
         const dicomDict = DicomMessage.readFile(arrayBuffer);
         const dataset = DicomMetaDictionary.naturalizeDataset(dicomDict.dict);
         datasets.push(dataset);
@@ -278,9 +286,8 @@ it("test_oneslice_seg", async () => {
 });
 
 it("test_normalizer_smaller", () => {
-    const naturalizedTags = dcmjs.data.DicomMetaDictionary.naturalizeDataset(
-        rawTags
-    );
+    const naturalizedTags =
+        dcmjs.data.DicomMetaDictionary.naturalizeDataset(rawTags);
 
     const rawTagsLen = JSON.stringify(rawTags).length;
     const naturalizedTagsLen = JSON.stringify(naturalizedTags).length;
@@ -305,7 +312,10 @@ it("test_multiframe_us", () => {
 it("test_fragment_multiframe", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/encapsulation/encapsulation-fragment-multiframe.dcm";
-    const dcmPath = await getTestDataset(url, "encapsulation-fragment-multiframe.dcm")
+    const dcmPath = await getTestDataset(
+        url,
+        "encapsulation-fragment-multiframe.dcm"
+    );
     const file = fs.readFileSync(dcmPath);
     const dicomData = dcmjs.data.DicomMessage.readFile(file.buffer, {
         // ignoreErrors: true,
@@ -421,7 +431,7 @@ it("test_invalid_vr_length", () => {
 it("test_encapsulation", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/encapsulation/encapsulation.dcm";
-    const dcmPath = await getTestDataset(url, "encapsulation.dcm")
+    const dcmPath = await getTestDataset(url, "encapsulation.dcm");
 
     // given
     const arrayBuffer = fs.readFileSync(dcmPath).buffer;
@@ -451,8 +461,8 @@ it("test_encapsulation", async () => {
     // when
     const lengths = [];
     const stream = new ReadBufferStream(
-        dicomDict.write({ fragmentMultiframe: false })
-    ),
+            dicomDict.write({ fragmentMultiframe: false })
+        ),
         useSyntax = EXPLICIT_LITTLE_ENDIAN;
 
     stream.reset();
@@ -531,7 +541,7 @@ it("test_custom_dictionary", () => {
 it("Reads DICOM with multiplicity", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/multiplicity/multiplicity.dcm";
-    const dcmPath = await getTestDataset(url, "multiplicity.dcm")
+    const dcmPath = await getTestDataset(url, "multiplicity.dcm");
     const file = await promisify(fs.readFile)(dcmPath);
     const dicomDict = DicomMessage.readFile(file.buffer);
 
@@ -542,7 +552,7 @@ it("Reads DICOM with multiplicity", async () => {
 it("Reads binary data into an ArrayBuffer", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/binary-tag/binary-tag.dcm";
-    const dcmPath = await getTestDataset(url, "binary-tag.dcm")
+    const dcmPath = await getTestDataset(url, "binary-tag.dcm");
 
     const file = await promisify(fs.readFile)(dcmPath);
     const dicomDict = DicomMessage.readFile(file.buffer);
@@ -558,7 +568,7 @@ it("Reads binary data into an ArrayBuffer", async () => {
 it("Reads a multiframe DICOM which has trailing padding", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/binary-parsing-stressors/multiframe-ultrasound.dcm";
-    const dcmPath = await getTestDataset(url, "multiframe-ultrasound.dcm")
+    const dcmPath = await getTestDataset(url, "multiframe-ultrasound.dcm");
     const dicomDict = DicomMessage.readFile(fs.readFileSync(dcmPath).buffer);
     const dataset = dcmjs.data.DicomMetaDictionary.naturalizeDataset(
         dicomDict.dict
@@ -575,7 +585,7 @@ it("Reads a multiframe DICOM which has trailing padding", async () => {
 it("Reads a multiframe DICOM with large private tags before and after the image data", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/binary-parsing-stressors/large-private-tags.dcm";
-    const dcmPath = await getTestDataset(url, "large-private-tags.dcm")
+    const dcmPath = await getTestDataset(url, "large-private-tags.dcm");
     const dicomDict = DicomMessage.readFile(fs.readFileSync(dcmPath).buffer);
     const dataset = dcmjs.data.DicomMetaDictionary.naturalizeDataset(
         dicomDict.dict
@@ -624,21 +634,44 @@ it("Writes encapsulated OB data which has an odd length with a padding byte in i
 it("test_deflated", async () => {
     const url =
         "https://github.com/dcmjs-org/data/releases/download/deflate-transfer-syntax/deflate_tests.zip";
-    const unzipPath = await getZippedTestDataset(url, "deflate_tests.zip", "deflate_tests");
+    const unzipPath = await getZippedTestDataset(
+        url,
+        "deflate_tests.zip",
+        "deflate_tests"
+    );
     const deflatedPath = path.join(unzipPath, "deflate_tests");
 
     const expected = [
-        { file: "image_dfl", tags: { Modality: "OT", Rows: 512, Columns: 512 } },
-        { file: "report_dfl", tags: { Modality: "SR", VerificationFlag: "UNVERIFIED", ContentDate: "20001110" } },
-        { file: "wave_dfl", tags: { Modality: "ECG", SynchronizationTrigger: "NO TRIGGER", ContentDate: "19991223" } }
+        {
+            file: "image_dfl",
+            tags: { Modality: "OT", Rows: 512, Columns: 512 }
+        },
+        {
+            file: "report_dfl",
+            tags: {
+                Modality: "SR",
+                VerificationFlag: "UNVERIFIED",
+                ContentDate: "20001110"
+            }
+        },
+        {
+            file: "wave_dfl",
+            tags: {
+                Modality: "ECG",
+                SynchronizationTrigger: "NO TRIGGER",
+                ContentDate: "19991223"
+            }
+        }
     ];
 
     expected.forEach(e => {
         const buffer = fs.readFileSync(path.join(deflatedPath, e.file));
-        const dicomDict = DicomMessage.readFile(buffer.buffer.slice(
-            buffer.byteOffset,
-            buffer.byteOffset + buffer.byteLength
-        ));
+        const dicomDict = DicomMessage.readFile(
+            buffer.buffer.slice(
+                buffer.byteOffset,
+                buffer.byteOffset + buffer.byteLength
+            )
+        );
         const dataset = DicomMetaDictionary.naturalizeDataset(dicomDict.dict);
         Object.keys(e.tags).forEach(t => {
             expect(dataset[t]).toEqual(e.tags[t]);
@@ -790,4 +823,92 @@ it("Tests that reading fails on a DICOM without a meta length tag", () => {
     }).toThrow(
         "Invalid DICOM file, meta length tag is malformed or not present."
     );
+});
+
+describe("The same DICOM file loaded from both DCM and JSON", () => {
+    let dicomData;
+    let jsonData;
+
+    beforeEach(() => {
+        const file = fs.readFileSync("test/sample-dicom.dcm");
+        dicomData = dcmjs.data.DicomMessage.readFile(file.buffer, {
+            // ignoreErrors: true,
+        });
+        jsonData = JSON.parse(JSON.stringify(sampleDicom));
+    });
+
+    describe("naturalized datasets", () => {
+        let dcmDataset;
+        let jsonDataset;
+
+        beforeEach(() => {
+            dcmDataset = dcmjs.data.DicomMetaDictionary.naturalizeDataset(
+                dicomData.dict
+            );
+            jsonDataset =
+                dcmjs.data.DicomMetaDictionary.naturalizeDataset(jsonData);
+        });
+
+        // OperatorName is three-component name
+        describe("OperatorName", () => {
+            it("Compares naturalized values", () => {
+                expect(JSON.stringify(jsonDataset.OperatorsName)).toEqual(
+                    JSON.stringify(dcmDataset.OperatorsName)
+                );
+                expect(jsonDataset.OperatorsName.toString()).toEqual(
+                    dcmDataset.OperatorsName.toString()
+                );
+            });
+
+            it("Compares denaturalized values", () => {
+                const jsonDenaturalized =
+                    dcmjs.data.DicomMetaDictionary.denaturalizeDataset(
+                        jsonDataset
+                    );
+                const dcmDenaturalized =
+                    dcmjs.data.DicomMetaDictionary.denaturalizeDataset(
+                        dcmDataset
+                    );
+
+                expect(jsonDenaturalized["00081070"].Value).toEqual([
+                    "Operator^John^^Mr.^Sr.=John Operator=O-per-a-tor"
+                ]);
+                expect(jsonDenaturalized["00081070"].Value).toEqual(
+                    dcmDenaturalized["00081070"].Value
+                );
+            });
+
+            it("Compares changed values", () => {
+                jsonDataset.OperatorsName.Alphabetic =
+                    dcmDataset.OperatorsName.Alphabetic = "Doe^John";
+                jsonDataset.OperatorsName.Ideographic =
+                    dcmDataset.OperatorsName.Ideographic = undefined;
+                jsonDataset.OperatorsName.Phonetic =
+                    dcmDataset.OperatorsName.Phonetic = undefined;
+
+                expect(JSON.stringify(jsonDataset.OperatorsName)).toEqual(
+                    JSON.stringify(dcmDataset.OperatorsName)
+                );
+                expect(jsonDataset.OperatorsName.toString()).toEqual(
+                    dcmDataset.OperatorsName.toString()
+                );
+
+                const jsonDenaturalized =
+                    dcmjs.data.DicomMetaDictionary.denaturalizeDataset(
+                        jsonDataset
+                    );
+                const dcmDenaturalized =
+                    dcmjs.data.DicomMetaDictionary.denaturalizeDataset(
+                        dcmDataset
+                    );
+
+                expect(jsonDenaturalized["00081070"].Value).toEqual([
+                    "Doe^John"
+                ]);
+                expect(jsonDenaturalized["00081070"].Value).toEqual(
+                    dcmDenaturalized["00081070"].Value
+                );
+            });
+        });
+    });
 });
